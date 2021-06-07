@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component name = "Authenticator" extends = "Task" >
+    <interface>
+        <field id = "sess_key" type = "string" value = "" />
+    </interface>
+
+    <script type = "text/brightscript" >
+        <![CDATA[
+
+        sub init()
+            m.top.functionName = "authenticate"
+        end sub
+
+        ' Validate current auth, or authenticate, or die
+        ' After authenticating successfully run after_sess_estab()
+        sub authenticate()
+            print "Beginning auth"
+            reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
+            access_token_value = reg_sec.read(m.global.REG_SEC_TOKEN_NAME)
+    
+            valid = validate_token(access_token_value)
+      
+            store = CreateObject("roChannelStore")
+            if valid
+                print "Was valid returning"
+                store.StoreChannelCredData(access_token_value)
+                m.top.sess_key = access_token_value
+            else
+                print "Wasn't valid, trying channelcred"
+
+                json = store.getChannelCred().json
+                if json = ""
+                    print "Channelcred was empty"
+                    m.top.sess_key = "INVALID"
+                    return
+                end if
+
+                parsed = parsejson(json)
+                access_token_value = parsed.channel_data
+                valid = validate_token(access_token_value)
+        
+                if valid
+                    print "Channelcred was valid"
+                    reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token_value)
+                    reg_sec.flush()
+          
+                    m.top.sess_key = access_token_value
+                else
+                    print "Channelcred was invalid"
+                    m.top.sess_key = "INVALID"
+                end if
+            end if
+        end sub
+
+        sub validate_channelcred(json)
+            print "Trying to validate channelcred"
+            json = parsejson(json)
+            access_token_value = json.channel_data
+            valid = validate_token(access_token_value)
+    
+            if valid
+                reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token_value)
+                reg_sec.flush()
+      
+                m.top.sess_key = access_token_value
+            else
+                m.top.sess_key = "INVALID"
+            end if
+        end sub
+
+        function validate_token(access_token) as boolean
+            print "Trying to validate " + access_token
+            exp = createObject("roDateTime")
+            exp.mark()
+            ' set it a year from now.  TODO, is that ok?
+            exp.fromseconds(exp.asseconds() + 365*24*60*60)
+      
+            sess_cook = {
+                "version": 1,
+                "domain": "",
+                "path": "",
+                "name": "session",
+                "value": access_token,
+                "expires": exp
+                }
+            cookies = createObject("roArray", 1, false)
+            cookies.setentry(0, sess_cook)
+      
+            readInternet = createObject("roUrlTransfer")
+            readInternet.SetCertificatesFile("common:/certs/ca-bundle.crt")
+            readInternet.AddHeader("X-Roku-Reserved-Dev-Id", "")
+            readInternet.AddCookies(cookies)
+            readInternet.InitClientCertificates()
+            readInternet.setUrl(m.global.URI_VALIDATE_SESS)
+            print "About to get from " + m.global.URI_VALIDATE_SESS
+            retval = readInternet.GetToString()
+            print "Get response " + retval
+      
+            if retval = "Valid"
+                return true
+            else
+                return false
+            end if
+        end function
+
+        ]]>
+    </script>
+
+</component>

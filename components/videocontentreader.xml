@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?> 
+
+<!--********** Copyright 2016 Roku Corp.  All Rights Reserved. **********-->
+
+<component name = "VideoContentReader" extends = "Task" >
+ 
+  <!-- TODO remove videocontenturi by using the global instead -->
+  <interface>
+    <field id = "videocontenturi" type = "uri" value = "" />
+    <field id = "videocontent" type = "node" />
+  </interface> 
+
+  <script type = "text/brightscript" >
+    <![CDATA[
+
+    sub init()
+      m.top.functionName = "readcontent"
+    end sub
+
+    sub readcontent()
+      videocontent = createObject("RoSGNode","ContentNode")
+      videocontent.setField("title", "TopLevelGoNoHigher_FordPrefect")
+
+      videocontentxml = createObject("roXMLElement")
+
+      ' uncomment/conditionalize for development package XML transfers (pkg:/server/foo.xml)
+      'xmlstring = ReadAsciiFile(m.top.videocontenturi)
+      'videocontentxml.parse(xmlstring)
+
+      ' uncomment/conditionalize for published channel Internet XML transfers (http://serverdomain/foo.xml)
+      readInternet = createObject("roUrlTransfer")
+      readInternet.SetCertificatesFile("common:/certs/ca-bundle.crt")
+      readInternet.AddHeader("X-Roku-Reserved-Dev-Id", "")
+      readInternet.InitClientCertificates()
+      readInternet.setUrl(m.global.URI_GET_VID_CONT)
+      videocontentxml.parse(readInternet.GetToString())
+
+      if videocontentxml.getName() = "VideoContent"
+        build_vid_list(videocontent, videocontentxml)
+      end if
+
+      m.top.videocontent = videocontent
+    end sub
+
+    sub build_vid_list(parent_content_node, parent_xml_elem)
+      'This function recursively builds a video list as content nodes
+
+      for each childElem in parent_xml_elem.getChildElements()
+        if childElem.getName() = "video"
+          item = parent_content_node.createChild("ContentNode")
+          item.setFields(childElem.getAttributes())
+          item.setField("contenttype", "episode")
+        else if childElem.getName() = "sublist"
+          item = parent_content_node.createChild("ContentNode")
+          item.setFields(childElem.getAttributes())
+          item.setField("contenttype", "series")
+          build_vid_list(item, childElem)
+        end if
+      end for
+    end sub
+
+    ]]>
+  </script>
+
+</component>
