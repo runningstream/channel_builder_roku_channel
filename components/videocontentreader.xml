@@ -7,6 +7,7 @@
   <!-- TODO remove videocontenturi by using the global instead -->
   <interface>
     <field id = "videocontenturi" type = "uri" value = "" />
+    <field id = "sess_key" type = "string" value = "" />
     <field id = "videocontent" type = "node" />
   </interface> 
 
@@ -18,6 +19,7 @@
     end sub
 
     sub readcontent()
+
       videocontent = createObject("RoSGNode","ContentNode")
       videocontent.setField("title", "TopLevelGoNoHigher_FordPrefect")
 
@@ -28,16 +30,49 @@
       'videocontentxml.parse(xmlstring)
 
       ' uncomment/conditionalize for published channel Internet XML transfers (http://serverdomain/foo.xml)
+
+      exp = createObject("roDateTime")
+      exp.mark()
+      exp.fromseconds(exp.asseconds() + 365*24*60*60)
+  
+      sess_cook = {
+          "version": 1,
+          "domain": m.global.COOKIE_DOMAIN,
+          "path": "/",
+          "name": "session",
+          "value": m.top.sess_key,
+          "expires": exp
+          }
+      cookies = createObject("roArray", 1, false)
+      cookies.setentry(0, sess_cook)
+
       readInternet = createObject("roUrlTransfer")
       readInternet.SetCertificatesFile("common:/certs/ca-bundle.crt")
       readInternet.AddHeader("X-Roku-Reserved-Dev-Id", "")
+
+      readInternet.EnableCookies()
+      retval = readInternet.AddCookies(cookies)
+      if retval = true
+          print "Cookies added"
+      else
+          print "Cookie add failed"
+      end if
+
       readInternet.InitClientCertificates()
       readInternet.setUrl(m.global.URI_GET_VID_CONT)
       videocontentxml.parse(readInternet.GetToString())
 
-      if videocontentxml.getName() = "VideoContent"
-        build_vid_list(videocontent, videocontentxml)
+      if videocontentxml.getName() = "object"
+        for each childElem in videocontentxml.getChildElements()
+            print "top ", childElem.getName()
+            if childElem.getName() = "entries"
+                build_vid_list(videocontent, childElem)
+            end if
+        end for
       end if
+
+      print videocontent
+      print videocontent.getChildCount()
 
       m.top.videocontent = videocontent
     end sub
@@ -45,17 +80,40 @@
     sub build_vid_list(parent_content_node, parent_xml_elem)
       'This function recursively builds a video list as content nodes
 
-      for each childElem in parent_xml_elem.getChildElements()
-        if childElem.getName() = "video"
+      for each arrayElem in parent_xml_elem.getChildElements()
+        elem = CreateObject("roAssociativeArray")
+        for each objectElem in arrayElem.getChildElements()
+          print "Object..."
+          for each childElem in objectElem.getChildElements()
+            print "mid ", childElem.getName(), childElem.getText()
+            if childElem.getName() <> "entries"
+              elem.AddReplace(childElem.getName(), childElem.getText())
+            else
+              print "needs to go deeper"
+              subelem = childElem
+            end if
+          end for
+        end for
+
+        if elem.lookup("type") = "video"
+          print "is video"
           item = parent_content_node.createChild("ContentNode")
-          item.setFields(childElem.getAttributes())
+          item.setField("title", elem.lookup("name"))
+          item.setField("HDPosterUrl", elem.lookup("image"))
+          item.setField("Url", elem.lookup("videourl"))
+          item.setField("StreamFormat", elem.lookup("videotype"))
           item.setField("contenttype", "episode")
-        else if childElem.getName() = "sublist"
+          print item
+        else if elem.lookup("type") = "sublist"
+          print "is sublist"
           item = parent_content_node.createChild("ContentNode")
-          item.setFields(childElem.getAttributes())
+          item.setField("title", elem.lookup("name"))
+          item.setField("HDPosterUrl", elem.lookup("image"))
           item.setField("contenttype", "series")
-          build_vid_list(item, childElem)
+          build_vid_list(item, subelem)
+          print item
         end if
+
       end for
     end sub
 

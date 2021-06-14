@@ -5,6 +5,7 @@ RunningStreamYourChannel.zip: components/*.xml source/*.brs
 	zip -r $@ * -x Makefile
 
 install: RunningStreamYourChannel.zip
+	echo "Do telnet $(ROKU_DEV_TARGET) 8085"
 	curl --user $(USERPASS) --digest --silent --show-error \
         -F "mysubmit=Install" -F "archive=@$<" \
         --output tempfile \

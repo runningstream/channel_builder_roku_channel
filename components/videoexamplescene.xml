@@ -13,8 +13,9 @@
     <![CDATA[
 
     sub init()
-      URI_API_BASE = "http://192.168.7.31:3031/"
+      URI_API_BASE = "http://192.168.7.31:3031/api/v1/"
       m.global.addFields( {
+        COOKIE_DOMAIN: "192.168.7.31",
         URI_API_BASE: URI_API_BASE,
         URI_AUTHENTICATE: URI_API_BASE + "authenticate_ro",
         URI_VALIDATE_SESS: URI_API_BASE + "validate_session_ro",
@@ -33,7 +34,7 @@
       m.video = m.top.findNode("exampleVideo")
       m.readVideoContentTask = createObject("RoSGNode","VideoContentReader")
       m.readVideoContentTask.observeField("videocontent","showvideolist")
-      m.readVideoContentTask.videocontenturi = "/get_channel_xml_ro"
+      'm.readVideoContentTask.videocontenturi = "/get_channel_xml_ro"
 
       ' TODO remove?
       'm.sublist = createObject("RoSGNode", "ContentNode")
@@ -69,39 +70,35 @@
     end sub
 
     sub login_step3()
-        print m.username_entry.text; m.password_entry.text
+        m.logger_iner = createObject("RoSGNode", "LoggerIner")
+        m.logger_iner.setField("username", m.username_entry.text)
+        m.logger_iner.setField("password", m.password_entry.text)
+        m.logger_iner.observeField("sess_key", "logger_iner_returned")
+        m.logger_iner.control = "RUN"
+    end sub
 
-        ' Do the auth... TODO
-
-
-        readInternet = createObject("roUrlTransfer")
-        readInternet.SetCertificatesFile("common:/certs/ca-bundle.crt")
-        readInternet.AddHeader("X-Roku-Reserved-Dev-Id", "")
-        readInternet.InitClientCertificates()
-        readInternet.setUrl(m.global.URI_AUTHENTICATE)
-
-        request = "username=" + readInternet.escape(m.username_entry.text) + "&password=" + readInternet.escape(m.password_entry.text)
-        access_token = readInternet.PostFromString(request)
-
-        reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
-        reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token)
-
-        ' Run the validate again and save it to the cloud if it works,
-        ' or loop back around again if not
-        'authenticate()
+    sub logger_iner_returned()
+        print "Logger Iner Returned - Trying Auth Again"
+        m.authTask = createObject("RoSGNode", "Authenticator")
+        m.authTask.observeField("sess_key", "authenticator_returned")
+        m.authTask.control = "RUN" 
     end sub
 
     sub readvideolist()
+      m.readVideoContentTask.setField("sess_key",m.authTask.sess_key)
       m.readVideoContentTask.control = "RUN" 
     end sub
 
     sub showvideolist()
       m.videolist.content = m.readVideoContentTask.videocontent
+      print "showvideolist ", m.videolist.content
+      print "showvideolist ", m.videolist.content.getChildCount()
       m.videolist.setFocus(true)
     end sub
 
     sub setvideo()
       videocontent = m.videolist.content.getChild(m.videolist.itemFocused)
+      print "setvideo ", videocontent
       m.videoposter.uri = videocontent.hdposterurl
       m.videoinfo.text = videocontent.description
       m.top.selecteditem = videocontent

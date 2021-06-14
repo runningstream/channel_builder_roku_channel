@@ -53,22 +53,6 @@
             end if
         end sub
 
-        sub validate_channelcred(json)
-            print "Trying to validate channelcred"
-            json = parsejson(json)
-            access_token_value = json.channel_data
-            valid = validate_token(access_token_value)
-    
-            if valid
-                reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token_value)
-                reg_sec.flush()
-      
-                m.top.sess_key = access_token_value
-            else
-                m.top.sess_key = "INVALID"
-            end if
-        end sub
-
         function validate_token(access_token) as boolean
             print "Trying to validate " + access_token
             exp = createObject("roDateTime")
@@ -78,8 +62,8 @@
       
             sess_cook = {
                 "version": 1,
-                "domain": "",
-                "path": "",
+                "domain": m.global.COOKIE_DOMAIN,
+                "path": "/",
                 "name": "session",
                 "value": access_token,
                 "expires": exp
@@ -90,7 +74,13 @@
             readInternet = createObject("roUrlTransfer")
             readInternet.SetCertificatesFile("common:/certs/ca-bundle.crt")
             readInternet.AddHeader("X-Roku-Reserved-Dev-Id", "")
-            readInternet.AddCookies(cookies)
+            readInternet.EnableCookies()
+            retval = readInternet.AddCookies(cookies)
+            if retval = true
+                print "Cookies added"
+            else
+                print "Cookie add failed"
+            end if
             readInternet.InitClientCertificates()
             readInternet.setUrl(m.global.URI_VALIDATE_SESS)
             print "About to get from " + m.global.URI_VALIDATE_SESS

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component name = "LoggerIner" extends = "Task" >
+    <interface>
+        <field id = "username" type = "string" value = "" />
+        <field id = "password" type = "string" value = "" />
+        <field id = "sess_key" type = "string" value = "" />
+    </interface>
+
+    <script type = "text/brightscript" >
+        <![CDATA[
+
+        sub init()
+            m.top.functionName = "dologin"
+        end sub
+
+        sub dologin()
+            print m.top.username; m.top.password
+
+            ' Do the auth... TODO
+
+
+            readInternet = createObject("roUrlTransfer")
+            readInternet.SetCertificatesFile("common:/certs/ca-bundle.crt")
+            readInternet.AddHeader("X-Roku-Reserved-Dev-Id", "")
+            readInternet.InitClientCertificates()
+            print m.global.URI_AUTHENTICATE
+            readInternet.setUrl(m.global.URI_AUTHENTICATE)
+
+            msg_port = createObject("roMessagePort")
+            readInternet.setMessagePort(msg_port)
+
+            request = "username=" + readInternet.escape(m.top.username) + "&password=" + readInternet.escape(m.top.password)
+            retval = readInternet.AsyncPostFromString(request)
+            if retval = false
+                print "Async Post returned false"
+            end if
+
+            msg = wait(5000, msg_port)
+            ' TODO maybe check msg.GetResponseCode() for return value 200
+            access_token = msg.GetString()
+
+            reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
+            reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token)
+
+            m.top.sess_key = access_token
+        end sub
+        ]]>
+    </script>
+
+</component>
