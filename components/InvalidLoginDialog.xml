@@ -1,21 +1,17 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
-<component name="UsernameEntry" extends="StandardKeyboardDialog" >
+<component name="InvalidLoginDialog" extends="StandardMessageDialog" >
 
 <interface>
-  <field id = "username" type = "string" />
-  <field id = "selected" type = "string" value = "unset"/>
+  <field id = "selected" type = "string" value = "unset" />
 </interface>
 
 <script type="text/brightscript" >
 <![CDATA[
 function init()
-    m.top.title   = "Login to Running Stream"
-    m.top.message = ["Please enter your email address:"]
-    m.top.buttons = ["OK", "Cancel"]
-    m.top.keyboardDomain = "email"
-
-    m.top.textEditBox.hintText = "email_addr@example.com"
+    m.top.title   = "Invalid Login"
+    m.top.message = ["Login failed...  Please try again."]
+    m.top.buttons = ["Login", "Cancel"]
 
     m.top.observeFieldScoped("buttonSelected", "dismissDialog")
     m.top.observeFieldScoped("wasClosed", "wasClosedChanged")
@@ -23,14 +19,12 @@ end function
 
 sub wasClosedChanged()
     if m.top.selected = "unset"
-        m.top.username = m.top.text
         m.top.selected = "Cancel"
         m.top.close = true
     end if
 end sub
 
 sub dismissDialog()
-    m.top.username = m.top.text
     m.top.selected = m.top.buttons[m.top.buttonSelected]
     m.top.close = true
 end sub

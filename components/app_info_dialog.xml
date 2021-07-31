@@ -1,21 +1,17 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
-<component name="UsernameEntry" extends="StandardKeyboardDialog" >
+<component name="AppInfoDialog" extends="StandardMessageDialog" >
 
 <interface>
-  <field id = "username" type = "string" />
-  <field id = "selected" type = "string" value = "unset"/>
+  <field id = "selected" type = "string" value = "unset" />
 </interface>
 
 <script type="text/brightscript" >
 <![CDATA[
 function init()
-    m.top.title   = "Login to Running Stream"
-    m.top.message = ["Please enter your email address:"]
-    m.top.buttons = ["OK", "Cancel"]
-    m.top.keyboardDomain = "email"
-
-    m.top.textEditBox.hintText = "email_addr@example.com"
+    m.top.title   = "Welcome to Running Stream - Your Channel"
+    m.top.message = ["Running Stream is a free web application that allows you to build the streaming channel you want to see.  Get started by creating an account at https://runningstream.cc, then putting in the addresses of your content.  Once you've setup your account there, login here!"]
+    m.top.buttons = ["Login", "Cancel"]
 
     m.top.observeFieldScoped("buttonSelected", "dismissDialog")
     m.top.observeFieldScoped("wasClosed", "wasClosedChanged")
@@ -23,14 +19,12 @@ end function
 
 sub wasClosedChanged()
     if m.top.selected = "unset"
-        m.top.username = m.top.text
         m.top.selected = "Cancel"
         m.top.close = true
     end if
 end sub
 
 sub dismissDialog()
-    m.top.username = m.top.text
     m.top.selected = m.top.buttons[m.top.buttonSelected]
     m.top.close = true
 end sub

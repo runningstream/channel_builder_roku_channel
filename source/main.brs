@@ -9,8 +9,10 @@ sub showChannelSGScreen()
   screen = CreateObject("roSGScreen")
   m.port = CreateObject("roMessagePort")
   screen.setMessagePort(m.port)
-  scene = screen.CreateScene("VideoExampleScene")
+  scene = screen.CreateScene("MainScene")
   screen.show()
+
+  scene.observeField("closescreen", m.port)
 
   while(true)
 
@@ -18,7 +20,14 @@ sub showChannelSGScreen()
     msgType = type(msg)
 
     if msgType = "roSGScreenEvent"
-      if msg.isScreenClosed() then return
+      if msg.isScreenClosed() then
+          return
+      end if
+    else if msgType = "roSGNodeEvent"
+      field = msg.getField()
+      if field = "closescreen" then
+        return
+      end if
     end if
 
   end while

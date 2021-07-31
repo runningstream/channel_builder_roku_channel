@@ -1,7 +1,7 @@
 'Update: copyright 2021 Running Stream LLC.  All Rights Reserved.
 'Original file: copyright 2016 Roku Corp.  All Rights Reserved.
 
-title=Your Channel
+title=Running Stream
 subtitle=Your Personal Roku Channel
 major_version=0
 minor_version=1
@@ -15,5 +15,5 @@ mm_icon_side_sd=pkg:/images/ChannelLogo248x140.png
 splash_screen_sd=pkg:/images/ChannelSplash_SD.png
 splash_screen_hd=pkg:/images/ChannelSplash_HD.png
 
-splash_color=#151515
+splash_color=#e7e8d1
 splash_min_time=1000

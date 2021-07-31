@@ -37,13 +37,28 @@
             end if
 
             msg = wait(5000, msg_port)
+
+            if msg = invalid
+                print "Response was invalid"
+                m.top.sess_key = "INVALID"
+                return
+            end if
+
             ' TODO maybe check msg.GetResponseCode() for return value 200
-            access_token = msg.GetString()
+            print "response code"
+            print msg.GetResponseCode()
+            if msg.GetResponseCode() = 200 then
+                print "Response was 200"
+                access_token = msg.GetString()
 
-            reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
-            reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token)
+                reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
+                reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token)
+                reg_sec.flush()
 
-            m.top.sess_key = access_token
+                m.top.sess_key = access_token
+            else
+                m.top.sess_key = "INVALID"
+            end if
         end sub
         ]]>
     </script>

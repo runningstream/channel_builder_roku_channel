@@ -3,6 +3,7 @@
 <component name = "Authenticator" extends = "Task" >
     <interface>
         <field id = "sess_key" type = "string" value = "" />
+        <field id = "invalidate_request" type = "bool" value = "false" />
     </interface>
 
     <script type = "text/brightscript" >
@@ -15,7 +16,20 @@
         ' Validate current auth, or authenticate, or die
         ' After authenticating successfully run after_sess_estab()
         sub authenticate()
+            if m.top.invalidate_request
+                print "Received Invalidation Request"
+                reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
+                reg_sec.write(m.global.REG_SEC_TOKEN_NAME, "INVALID")
+                reg_sec.flush()
+                store = CreateObject("roChannelStore")
+                store.StoreChannelCredData("INVALID")
+                m.top.sess_key = "INVALID"
+                return
+            end if
+
             print "Beginning auth"
+
+            ' Try any token found in the local registry
             reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
             access_token_value = reg_sec.read(m.global.REG_SEC_TOKEN_NAME)
     
@@ -24,11 +38,14 @@
             store = CreateObject("roChannelStore")
             if valid
                 print "Was valid returning"
+
+                ' If it was valid, store it in the global registry
                 store.StoreChannelCredData(access_token_value)
                 m.top.sess_key = access_token_value
             else
                 print "Wasn't valid, trying channelcred"
 
+                ' If it wasn't valid, try the global registry creds
                 json = store.getChannelCred().json
                 if json = ""
                     print "Channelcred was empty"
@@ -42,6 +59,8 @@
         
                 if valid
                     print "Channelcred was valid"
+
+                    ' If the global registry creds worked, store that in local
                     reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token_value)
                     reg_sec.flush()
           
@@ -70,7 +89,7 @@
                 }
             cookies = createObject("roArray", 1, false)
             cookies.setentry(0, sess_cook)
-      
+
             readInternet = createObject("roUrlTransfer")
             readInternet.SetCertificatesFile("common:/certs/ca-bundle.crt")
             readInternet.AddHeader("X-Roku-Reserved-Dev-Id", "")
@@ -83,11 +102,18 @@
             end if
             readInternet.InitClientCertificates()
             readInternet.setUrl(m.global.URI_VALIDATE_SESS)
-            print "About to get from " + m.global.URI_VALIDATE_SESS
-            retval = readInternet.GetToString()
-            print "Get response " + retval
+
+            msg_port = createObject("roMessagePort")
+            readInternet.setMessagePort(msg_port)
       
-            if retval = "Valid"
+            print "About to get from " + m.global.URI_VALIDATE_SESS
+            retval = readInternet.AsyncGetToString()
+            if retval = false
+                print "Async get returned false"
+            end if
+
+            msg = wait(5000, msg_port)
+            if msg.GetResponseCode() = 200
                 return true
             else
                 return false

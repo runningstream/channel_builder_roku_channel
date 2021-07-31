@@ -1,7 +1,7 @@
 USERPASS := `cat .rokulogin`
 ROKU_DEV_TARGET := 192.168.7.181
 
-RunningStreamYourChannel.zip: components/*.xml source/*.brs
+RunningStreamYourChannel.zip: components/*.xml source/*.brs images/*
 	zip -r $@ * -x Makefile
 
 install: RunningStreamYourChannel.zip
