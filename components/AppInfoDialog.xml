@@ -9,8 +9,8 @@
 <script type="text/brightscript" >
 <![CDATA[
 function init()
-    m.top.title   = "Welcome to Running Stream - Your Channel"
-    m.top.message = ["Running Stream is a free web application that allows you to build the streaming channel you want to see.  Get started by creating an account at https://runningstream.cc, then putting in the addresses of your content.  Once you've setup your account there, login here!"]
+    m.top.title   = "Welcome to Running Stream"
+    m.top.message = ["Your Channel", "Running Stream lets you stream your videos, through your channel, free.", "Get started by creating an account at https://runningstream.cc, then building your channel.  Once you've setup your account there, login here."]
     m.top.buttons = ["Login", "Cancel"]
 
     m.top.observeFieldScoped("buttonSelected", "dismissDialog")
