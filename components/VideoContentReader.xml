@@ -46,10 +46,8 @@
 
       readInternet.EnableCookies()
       retval = readInternet.AddCookies(cookies)
-      if retval = true
-          print "Cookies added"
-      else
-          print "Cookie add failed"
+      if retval <> true
+          print "ERROR: Cookie add failed!"
       end if
 
       readInternet.InitClientCertificates()
@@ -58,7 +56,6 @@
 
       if videocontentxml.getName() = "object"
         for each childElem in videocontentxml.getChildElements()
-            print "top ", childElem.getName()
             if childElem.getName() = "entries"
                 build_vid_list(videocontent, childElem)
             end if
@@ -70,8 +67,6 @@
           item.setField("contenttype", "not set or not supported")
       end if
 
-      print videocontent
-      print videocontent.getChildCount()
 
       m.top.videocontent = videocontent
     end sub
@@ -80,33 +75,26 @@
       'This function recursively builds a video list as content nodes
 
       if parent_xml_elem.getChildElements() = invalid then
-          print "is empty list"
           item = parent_content_node.createChild("ContentNode")
           item.setField("title", "No Content")
           item.setField("HDPosterUrl", "pkg:/images/NoContent540x304.png")
           item.setField("contenttype", "not set or not supported")
-          print item
           return
       end if
 
       for each arrayElem in parent_xml_elem.getChildElements()
         elem = CreateObject("roAssociativeArray")
         for each objectElem in arrayElem.getChildElements()
-          print "Object..."
           for each childElem in objectElem.getChildElements()
-            print "mid ", childElem.getName(), childElem.getText()
             if childElem.getName() <> "entries"
               elem.AddReplace(childElem.getName(), childElem.getText())
             else
-              print "needs to go deeper"
-              print childElem
               subelem = childElem
             end if
           end for
         end for
 
         if elem.lookup("type") = "video"
-          print "is media"
           item = parent_content_node.createChild("ContentNode")
           item.setField("title", elem.lookup("name"))
           item.setField("Url", elem.lookup("videourl"))
@@ -127,9 +115,7 @@
           end if
           item.addField("loop", "boolean", false)
           item.setField("loop", elem.lookup("loop"))
-          print item
         else if elem.lookup("type") = "sublist"
-          print "is sublist"
           item = parent_content_node.createChild("ContentNode")
           item.setField("title", elem.lookup("name"))
           if elem.lookup("image") = ""
@@ -139,7 +125,6 @@
           end if
           item.setField("contenttype", "series")
           build_vid_list(item, subelem)
-          print item
         end if
 
       end for

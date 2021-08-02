@@ -2,7 +2,8 @@ USERPASS := `cat .rokulogin`
 ROKU_DEV_TARGET := 192.168.7.181
 
 RunningStreamYourChannel.zip: components/*.xml source/*.brs images/*
-	zip -r $@ * -x Makefile
+	zip -r $@.tmp * -x Makefile $@ packages/* packages
+	mv $@.tmp $@
 
 install: RunningStreamYourChannel.zip
 	echo "Do telnet $(ROKU_DEV_TARGET) 8085"

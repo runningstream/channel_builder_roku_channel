@@ -2,15 +2,13 @@
 'Original file: copyright 2016 Roku Corp.  All Rights Reserved.
 
 title=Running Stream
-subtitle=Your Personal Roku Channel
 major_version=0
 minor_version=1
-build_version=00000
+build_version=00001
+supports_input_launch=1
 
-mm_icon_focus_hd=pkg:/images/ChannelLogo336x210.jpg
-mm_icon_side_hd=pkg:/images/ChannelLogo108x69.png
-mm_icon_focus_sd=pkg:/images/ChannelLogo248x140.png
-mm_icon_side_sd=pkg:/images/ChannelLogo248x140.png
+mm_icon_focus_hd=pkg:/images/ChannelLogo290x218.png
+mm_icon_focus_sd=pkg:/images/ChannelLogo246x140.png
 
 splash_screen_sd=pkg:/images/ChannelSplash_SD.png
 splash_screen_hd=pkg:/images/ChannelSplash_HD.png

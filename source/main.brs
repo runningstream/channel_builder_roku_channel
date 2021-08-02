@@ -7,8 +7,10 @@ end sub
 
 sub showChannelSGScreen()
   screen = CreateObject("roSGScreen")
+  roinput = CreateObject("roInput")
   m.port = CreateObject("roMessagePort")
   screen.setMessagePort(m.port)
+  roinput.setMessagePort(m.port)
   scene = screen.CreateScene("MainScene")
   screen.show()
 
@@ -27,6 +29,11 @@ sub showChannelSGScreen()
       field = msg.getField()
       if field = "closescreen" then
         return
+      end if
+    else if msgType = "roInputEvent"
+      if msg.isInput()
+        info = msg.getInfo()
+        print "Received input: "; FormatJSON(info)
       end if
     end if
 

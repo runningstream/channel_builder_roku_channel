@@ -13,11 +13,11 @@
             m.top.functionName = "authenticate"
         end sub
 
-        ' Validate current auth, or authenticate, or die
+        ' Validate or invalidate current auth, or authenticate, or die
         ' After authenticating successfully run after_sess_estab()
         sub authenticate()
             if m.top.invalidate_request
-                print "Received Invalidation Request"
+                ' This was an invalidation - logout - request, so do that
                 reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
                 reg_sec.write(m.global.REG_SEC_TOKEN_NAME, "INVALID")
                 reg_sec.flush()
@@ -27,8 +27,6 @@
                 return
             end if
 
-            print "Beginning auth"
-
             ' Try any token found in the local registry
             reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
             access_token_value = reg_sec.read(m.global.REG_SEC_TOKEN_NAME)
@@ -37,18 +35,13 @@
       
             store = CreateObject("roChannelStore")
             if valid
-                print "Was valid returning"
-
                 ' If it was valid, store it in the global registry
                 store.StoreChannelCredData(access_token_value)
                 m.top.sess_key = access_token_value
             else
-                print "Wasn't valid, trying channelcred"
-
                 ' If it wasn't valid, try the global registry creds
                 json = store.getChannelCred().json
                 if json = ""
-                    print "Channelcred was empty"
                     m.top.sess_key = "INVALID"
                     return
                 end if
@@ -58,25 +51,20 @@
                 valid = validate_token(access_token_value)
         
                 if valid
-                    print "Channelcred was valid"
-
                     ' If the global registry creds worked, store that in local
                     reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token_value)
                     reg_sec.flush()
           
                     m.top.sess_key = access_token_value
                 else
-                    print "Channelcred was invalid"
                     m.top.sess_key = "INVALID"
                 end if
             end if
         end sub
 
         function validate_token(access_token) as boolean
-            print "Trying to validate " + access_token
             exp = createObject("roDateTime")
             exp.mark()
-            ' set it a year from now.  TODO, is that ok?
             exp.fromseconds(exp.asseconds() + 365*24*60*60)
       
             sess_cook = {
@@ -95,10 +83,8 @@
             readInternet.AddHeader("X-Roku-Reserved-Dev-Id", "")
             readInternet.EnableCookies()
             retval = readInternet.AddCookies(cookies)
-            if retval = true
-                print "Cookies added"
-            else
-                print "Cookie add failed"
+            if retval <> true
+                print "ERROR: Cookie add failed!"
             end if
             readInternet.InitClientCertificates()
             readInternet.setUrl(m.global.URI_VALIDATE_SESS)
@@ -106,10 +92,9 @@
             msg_port = createObject("roMessagePort")
             readInternet.setMessagePort(msg_port)
       
-            print "About to get from " + m.global.URI_VALIDATE_SESS
             retval = readInternet.AsyncGetToString()
             if retval = false
-                print "Async get returned false"
+                print "ERROR: Async get returned false!"
             end if
 
             msg = wait(5000, msg_port)

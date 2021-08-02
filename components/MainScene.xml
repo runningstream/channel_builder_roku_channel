@@ -38,8 +38,6 @@
       m.video = m.top.findNode("videoObject")
       m.audio = m.top.findNode("audioObject")
       m.audioControls = m.top.findNode("audioControls")
-      m.readVideoContentTask = createObject("RoSGNode","VideoContentReader")
-      m.readVideoContentTask.observeField("videocontent","showvideolist")
 
 
       m.video.observeField("state","controlvideoplay")
@@ -49,27 +47,37 @@
       m.audioControls.observeField("buttonSelected", "audioControlButton")
 
       validate_sess_key()
-      'm.authTask = createObject("RoSGNode", "Authenticator")
-      'm.authTask.observeField("sess_key", "authenticator_returned")
-      'm.authTask.control = "RUN" 
     end sub
 
-    ' Executes after the Authenticator Task completes
+    ' Login step 1: Validate the session key
+    sub validate_sess_key()
+        m.authTask = createObject("RoSGNode", "Authenticator")
+        m.authTask.observeField("sess_key", "authenticator_returned")
+        m.authTask.control = "RUN" 
+    end sub
+
+    ' Login step 2: See if the session key validated
     sub authenticator_returned()
-        print "Authenticator returned"
         if m.authTask.sess_key = "INVALID"
+            ' Session key failed to validate
+            ' Continue login...
             show_app_info()
         else
+            ' Session key validated
+            ' Login complete!
             readvideolist()
         end if
     end sub
 
+    ' Login step 3: Display program information
     sub show_app_info()
+        m.top.signalBeacon("AppDialogInitiate")
         m.app_info = createObject("roSGNode", "AppInfoDialog")
         m.app_info.observeField("selected", "app_info_complete")
         m.top.dialog = m.app_info
     end sub
 
+    ' Login step 4: If the user wants to continue, start to request username
     sub app_info_complete()
         if m.app_info.selected = "Login"
             request_username()
@@ -78,12 +86,14 @@
         end if
     end sub
 
+    ' Login step 5: Display the username entry
     sub request_username()
         m.username_entry = createObject("roSGNode", "UsernameEntry")
         m.username_entry.observeField("selected", "username_returned")
         m.top.dialog = m.username_entry
     end sub
 
+    ' Login step 6: If the user didn't cancel, start to request password
     sub username_returned()
         if m.username_entry.selected = "OK"
             request_password()
@@ -92,12 +102,14 @@
         end if
     end sub
 
+    ' Login step 7: Display password request
     sub request_password()
         m.password_entry = createObject("roSGNode", "PasswordEntry")
         m.password_entry.observeField("selected", "password_returned")
         m.top.dialog = m.password_entry
     end sub
 
+    ' Login step 8: If the user didn't cancel, start to try to login the user/pass
     sub password_returned()
         if m.password_entry.selected = "OK"
             attempt_userpass_auth()
@@ -106,6 +118,7 @@
         end if
     end sub
 
+    ' Login step 9: Try to login user/pass
     sub attempt_userpass_auth()
         m.logger_iner = createObject("RoSGNode", "LoggerIner")
         m.logger_iner.setField("username", m.username_entry.text)
@@ -114,16 +127,21 @@
         m.logger_iner.control = "RUN"
     end sub
 
+    ' Login step 10: See if the login worked
     sub loger_iner_complete()
         if m.logger_iner.sess_key = "INVALID"
+            ' The login failed, display that fact
             m.invalid_login = createObject("roSGNode", "InvalidLoginDialog")
             m.invalid_login.observeField("selected", "invalid_login_complete")
             m.top.dialog = m.invalid_login
         else
+            ' Login succeeded - try the session key once more
+            m.top.signalBeacon("AppDialogComplete")
             validate_sess_key()
         end if
     end sub
 
+    ' Login step 11: User knows their login failed, either quit or retry
     sub invalid_login_complete()
         if m.invalid_login.selected = "Login"
             request_username()
@@ -132,26 +150,23 @@
         end if
     end sub
 
-    sub validate_sess_key()
-        print "Attempting to validate session key"
-        m.authTask = createObject("RoSGNode", "Authenticator")
-        m.authTask.observeField("sess_key", "authenticator_returned")
-        m.authTask.control = "RUN" 
-    end sub
-
+    ' After Login: Start reading the video list
     sub readvideolist()
+      m.readVideoContentTask = createObject("RoSGNode","VideoContentReader")
+      m.readVideoContentTask.observeField("videocontent","showvideolist")
       m.readVideoContentTask.setField("sess_key",m.authTask.sess_key)
       m.readVideoContentTask.control = "RUN" 
     end sub
 
+    ' Video list ready for display!
     sub showvideolist()
       m.videolist.content = m.readVideoContentTask.videocontent
 
       m.top.findNode("connectingLabel").visible = false
 
-      print "showvideolist ", m.videolist.content
-      print "showvideolist ", m.videolist.content.getChildCount()
       m.videolist.setFocus(true)
+
+      m.top.signalBeacon("AppLaunchComplete")
 
       if m.videolist.content.getChildCount() = 1
           m.videolist.jumpToItem = 0
@@ -161,7 +176,6 @@
 
     sub setvideo()
       videocontent = m.videolist.content.getChild(m.videolist.itemFocused)
-      print "setvideo ", videocontent
       m.videoposter.uri = videocontent.hdposterurl
       m.videoinfo.text = videocontent.description
       m.top.selecteditem = videocontent
@@ -282,7 +296,6 @@
 
     sub options_dialog_done()
         if m.options_dlg.selected = "Logout"
-            print "Attempting to invalidate session key"
             m.authTask = createObject("RoSGNode", "Authenticator")
             m.authTask.invalidate_request = true
             m.authTask.observeField("sess_key", "close_program")
@@ -309,7 +322,8 @@
           id = "videoLabelList"
           itemSize = "[ 350, 60 ]"
           translation = "[ 140, 100 ]"
-          color = "0xb85042"
+          color = "0xb85042a0"
+          focusedColor = "0xb85042ff"
           />
 
         <Poster 
@@ -366,15 +380,16 @@
             id = "audioControls"
             buttons = "[&quot;Play/Pause&quot;, &quot;Restart&quot;, &quot;Stop&quot;]"
             translation = "[ 300, 300 ]"
-            font = "font:LargeBoldSystemFont"
-            textcolor = "0xb85042a0"
+            textFont = "font:LargeBoldSystemFont"
+            textColor = "0xb85042a0"
+            focusedTextFont = "font:LargeBoldSystemFont"
             focusedtextcolor = "0xb85042ff"
         />
     </Rectangle>
 
     <SimpleLabel
         id = "connectingLabel"
-        font = "font:LargeBoldSystemFont"
+        fontUri = "font:LargeBoldSystemFont"
         text = "Connecting..."
         color = "0xb85042ff"
         horizOrigin = "center"
