@@ -28,6 +28,7 @@
         URI_AUTHENTICATE: URI_API_BASE + "authenticate_ro",
         URI_VALIDATE_SESS: URI_API_BASE + "validate_session_ro",
         URI_GET_VID_CONT: URI_API_BASE + "get_channel_xml_ro",
+        URI_REFRESH_SESS: URI_API_BASE + "refresh_session_ro",
         REG_SEC: "yourchannel_sessionkey",
         REG_SEC_TOKEN_NAME: "session_key",
         sess_key: ""
@@ -68,7 +69,24 @@
             ' Continue login...
             show_app_info()
         else
-            ' Session key validated
+            ' Session key validated - let's refresh it
+            m.refresher = createObject("RoSGNode", "SessionRefresher")
+            m.refresher.setField("sess_key", m.authTask.sess_key)
+            m.refresher.observeField("sess_key", "key_refreshed")
+            m.refresher.control = "RUN"
+        end if
+    end sub
+
+    ' Login step 2.5: Session key just got refreshed
+    sub key_refreshed()
+        if m.refresher.sess_key = "INVALID"
+            ' The refresh failed...  strange
+            print "Session refresh INVALID!"
+
+            m.invalid_login = createObject("roSGNode", "InvalidLoginDialog")
+            m.invalid_login.observeField("selected", "invalid_login_complete")
+            m.top.dialog = m.invalid_login
+        else
             ' Login complete!
             readvideolist()
         end if
