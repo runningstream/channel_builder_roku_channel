@@ -14,11 +14,16 @@
     <![CDATA[
 
     sub init()
-      URI_API_BASE = "https://api.runningstream.cc/api/v1/"
-      'URI_API_BASE = "http://192.168.7.31:3031/api/v1/"
+      DEBUGGING = true
+      if DEBUGGING
+          URI_API_BASE = "http://192.168.86.11:3031/api/v1/"
+          COOKIE_DOMAIN = "192.168.86.11"
+      else
+          URI_API_BASE = "https://api.runningstream.cc/api/v1/"
+          COOKIE_DOMAIN = "api.runningstream.cc"
+      end if
       m.global.addFields( {
-        COOKIE_DOMAIN: "api.runningstream.cc",
-        'COOKIE_DOMAIN: "192.168.7.31",
+        COOKIE_DOMAIN: COOKIE_DOMAIN,
         URI_API_BASE: URI_API_BASE,
         URI_AUTHENTICATE: URI_API_BASE + "authenticate_ro",
         URI_VALIDATE_SESS: URI_API_BASE + "validate_session_ro",

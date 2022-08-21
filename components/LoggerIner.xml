@@ -39,7 +39,16 @@
             end if
 
             if msg.GetResponseCode() = 200 then
-                access_token = msg.GetString()
+                'TODO: remove - old method
+                'access_token = msg.GetString()
+
+                headers = msg.GetResponseHeaders()
+                set_cookie = headers["set-cookie"]
+
+                session_loc = set_cookie.instr("session=")
+                after_sess = set_cookie.right(set_cookie.len() - 8)
+                sess_end = after_sess.instr(";")
+                access_token = after_sess.left(sess_end)
 
                 reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
                 reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token)
