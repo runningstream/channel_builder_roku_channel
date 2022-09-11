@@ -6,6 +6,14 @@ RunningStreamYourChannel.zip: components/*.xml source/*.brs images/*
 	mv $@.tmp $@
 
 # Sometimes it needs to be mysubmit=replace, sometimes Install
+remove: 
+	touch .empty
+	curl --user $(USERPASS) --digest  --show-error \
+        -F "archive=@.empty;type=application/octet-stream" -F "mysubmit=Delete" \
+        --output tempfile \
+        --write-out "%{http_code}" \
+        http://$(ROKU_DEV_TARGET)/plugin_install
+
 install: RunningStreamYourChannel.zip
 	echo "Do telnet $(ROKU_DEV_TARGET) 8085"
 	curl --user $(USERPASS) --digest  --show-error \
