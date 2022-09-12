@@ -29,6 +29,7 @@
         URI_AUTHENTICATE: URI_API_BASE + "authenticate_ro",
         URI_VALIDATE_SESS: URI_API_BASE + "validate_session_ro",
         URI_GET_VID_CONT: URI_API_BASE + "get_channel_xml_ro",
+        URI_GET_VID_CONT_JSON: URI_API_BASE + "get_active_channel_ro",
         URI_REFRESH_SESS: URI_API_BASE + "refresh_session_ro",
         REG_SEC: "yourchannel_sessionkey",
         REG_SEC_TOKEN_NAME: "session_key",
@@ -223,10 +224,8 @@
         m.video.setFocus(true)
       else if m.top.selecteditem.contenttype = 5
         ' This is an audio item
-        selectionControls = m.top.findNode("selectionControls")
         audioControlRectangle = m.top.findNode("audioControlRectangle")
         audioControlRectangle.visible = true
-        'selectionControls.visible = false
 
         m.audio.content = m.top.selecteditem
         m.audio.control = "play"

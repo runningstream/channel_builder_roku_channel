@@ -23,8 +23,6 @@
       videocontent.setField("HDPosterUrl", "pkg:/images/NoContent540x304.png")
       videocontent.setField("contenttype", "not set or not supported")
 
-      videocontentxml = createObject("roXMLElement")
-
       exp = createObject("roDateTime")
       exp.mark()
       exp.fromseconds(exp.asseconds() + 365*24*60*60)
@@ -51,30 +49,18 @@
       end if
 
       readInternet.InitClientCertificates()
-      readInternet.setUrl(m.global.URI_GET_VID_CONT)
-      videocontentxml.parse(readInternet.GetToString())
+      readInternet.setUrl(m.global.URI_GET_VID_CONT_JSON)
+      videocontentjson = ParseJson(readInternet.GetToString())
 
-      if videocontentxml.getName() = "object"
-        for each childElem in videocontentxml.getChildElements()
-            if childElem.getName() = "entries"
-                build_vid_list(videocontent, childElem)
-            end if
-        end for
-      else
-          item = videocontent.createChild("ContentNode")
-          item.setField("title", "No Content")
-          item.setField("HDPosterUrl", "pkg:/images/NoContent540x304.png")
-          item.setField("contenttype", "not set or not supported")
-      end if
-
+      build_vid_list(videocontent, videocontentjson.entries)
 
       m.top.videocontent = videocontent
     end sub
 
-    sub build_vid_list(parent_content_node, parent_xml_elem)
+    sub build_vid_list(parent_content_node, parent_json_entries)
       'This function recursively builds a video list as content nodes
 
-      if parent_xml_elem.getChildElements() = invalid then
+      if parent_json_entries = invalid or parent_json_entries.count() = 0 then
           item = parent_content_node.createChild("ContentNode")
           item.setField("title", "No Content")
           item.setField("HDPosterUrl", "pkg:/images/NoContent540x304.png")
@@ -82,51 +68,39 @@
           return
       end if
 
-      for each arrayElem in parent_xml_elem.getChildElements()
-        elem = CreateObject("roAssociativeArray")
-        for each objectElem in arrayElem.getChildElements()
-          for each childElem in objectElem.getChildElements()
-            if childElem.getName() <> "entries"
-              elem.AddReplace(childElem.getName(), childElem.getText())
-            else
-              subelem = childElem
-            end if
-          end for
-        end for
-
-        if elem.lookup("type") = "video"
+      for each entry in parent_json_entries
+        if entry.Lookup("type") = "video"
           item = parent_content_node.createChild("ContentNode")
-          item.setField("title", elem.lookup("name"))
-          item.setField("Url", elem.lookup("videourl"))
+          item.setField("title", entry.Lookup("name"))
+          item.setField("Url", entry.Lookup("videourl"))
           default_image = ""
-          if elem.lookup("videotype") = "audio"
+          if entry.Lookup("videotype") = "audio"
               item.setField("StreamFormat", "mp3")
               item.setField("contenttype", "audio")
               default_image = "pkg:/images/SoundPlay540x304.png"
           else
-              item.setField("StreamFormat", elem.lookup("videotype"))
+              item.setField("StreamFormat", entry.Lookup("videotype"))
               item.setField("contenttype", "episode")
               default_image = "pkg:/images/PlayButton540x304.png"
           end if
-          if elem.lookup("image") = ""
+          if entry.Lookup("image") = ""
               item.setField("HDPosterUrl", default_image)
           else
-              item.setField("HDPosterUrl", elem.lookup("image"))
+              item.setField("HDPosterUrl", entry.Lookup("image"))
           end if
           item.addField("loop", "boolean", false)
-          item.setField("loop", elem.lookup("loop"))
-        else if elem.lookup("type") = "sublist"
+          item.setField("loop", entry.Lookup("loop"))
+        else if entry.Lookup("type") = "sublist"
           item = parent_content_node.createChild("ContentNode")
-          item.setField("title", elem.lookup("name"))
-          if elem.lookup("image") = ""
+          item.setField("title", entry.Lookup("name"))
+          if entry.Lookup("image") = ""
               item.setField("HDPosterUrl", "pkg:/images/Folder540x304.png")
           else
-              item.setField("HDPosterUrl", elem.lookup("image"))
+              item.setField("HDPosterUrl", entry.Lookup("image"))
           end if
           item.setField("contenttype", "series")
-          build_vid_list(item, subelem)
+          build_vid_list(item, entry.Lookup("entries"))
         end if
-
       end for
     end sub
 

@@ -45,7 +45,6 @@
                 headers = msg.GetResponseHeaders()
                 set_cookie = headers["set-cookie"]
 
-                session_loc = set_cookie.instr("session=")
                 after_sess = set_cookie.right(set_cookie.len() - 8)
                 sess_end = after_sess.instr(";")
                 access_token = after_sess.left(sess_end)
