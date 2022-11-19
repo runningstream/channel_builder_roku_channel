@@ -2,6 +2,7 @@
 
 <component name = "Authenticator" extends = "Task" >
     <interface>
+        <field id = "input_sess_key" type = "string" value = "" />
         <field id = "sess_key" type = "string" value = "" />
         <field id = "invalidate_request" type = "bool" value = "false" />
     </interface>
@@ -17,52 +18,79 @@
         ' After authenticating successfully run after_sess_estab()
         sub authenticate()
             if m.top.invalidate_request
-                ' This was an invalidation - logout - request, so do that
-                reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
-                reg_sec.write(m.global.REG_SEC_TOKEN_NAME, "INVALID")
-                reg_sec.flush()
-                store = CreateObject("roChannelStore")
-                store.StoreChannelCredData("INVALID")
-                m.top.sess_key = "INVALID"
-                return
+                print "AUTH: Running invalidate request - logout"
+
+                end_func_store_key("INVALID")
             end if
 
-            ' Try any token found in the local registry
             reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
-            access_token_value = reg_sec.read(m.global.REG_SEC_TOKEN_NAME)
-    
-            valid = validate_token(access_token_value)
-      
             store = CreateObject("roChannelStore")
-            if valid
-                ' If it was valid, store it in the global registry
-                store.StoreChannelCredData(access_token_value)
-                m.top.sess_key = access_token_value
-            else
-                ' If it wasn't valid, try the global registry creds
+
+            ' valid gets set to true when we find a key that works
+            valid = false
+            ' tmp_sess_key is the key we're currently trying
+            tmp_sess_key = ""
+            ' needs_refresh is true if we need to refresh our sess key
+            needs_refresh = false
+
+            if m.top.input_sess_key <> ""
+                print "AUTH: Trying provided session key"
+
+                tmp_sess_key = m.top.input_sess_key
+                valid = validate_token(tmp_sess_key)
+
+                ' Assume if we were provided a sess_key it is fresh
+                needs_refresh = false
+            end if
+
+            if valid <> true
+                print "AUTH: Trying local registry key"
+
+                tmp_sess_key = reg_sec.read(m.global.REG_SEC_TOKEN_NAME)
+                valid = validate_token(tmp_sess_key)
+
+                ' If the local reg token worked we need to refresh it
+                needs_refresh = true
+            end if
+
+            if valid <> true
+                print "AUTH: Trying global store key"
+
                 json = store.getChannelCred().json
-                if json = ""
-                    m.top.sess_key = "INVALID"
-                    return
+                if json <> ""
+                    parsed = parsejson(json)
+                    tmp_sess_key = parsed.channel_data
+                    valid = validate_token(tmp_sess_key)
+
+                    ' If the store token worked we need to refresh it
+                    needs_refresh = true
+                end if
+            end if
+      
+            if valid
+                print "AUTH: Found valid sess key"
+
+                if needs_refresh
+                    print "AUTH: Doing refresh"
+
+                    pre_refresh = tmp_sess_key
+                    tmp_sess_key = do_refresh(tmp_sess_key)
+
+                    if pre_refresh = tmp_sess_key
+                        print "ERROR: Pre-refreshed key == post-refreshed key"
+                    end if
                 end if
 
-                parsed = parsejson(json)
-                access_token_value = parsed.channel_data
-                valid = validate_token(access_token_value)
-        
-                if valid
-                    ' If the global registry creds worked, store that in local
-                    reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token_value)
-                    reg_sec.flush()
-          
-                    m.top.sess_key = access_token_value
-                else
-                    m.top.sess_key = "INVALID"
-                end if
+                print "AUTH: Storing key"
+                end_func_store_key(tmp_sess_key)
+            else
+                print "AUTH: Didn't find valid key"
+
+                end_func_store_key("INVALID")
             end if
         end sub
 
-        function validate_token(access_token) as boolean
+        function validate_token(sess_key) as boolean
             exp = createObject("roDateTime")
             exp.mark()
             exp.fromseconds(exp.asseconds() + 365*24*60*60)
@@ -72,7 +100,7 @@
                 "domain": m.global.COOKIE_DOMAIN,
                 "path": "/",
                 "name": "session",
-                "value": access_token,
+                "value": sess_key,
                 "expires": exp
                 }
             cookies = createObject("roArray", 1, false)
@@ -98,6 +126,12 @@
             end if
 
             msg = wait(5000, msg_port)
+
+            if msg = invalid
+                print "ERROR: Msg add failure"
+                return false
+            end if
+
             if msg.GetResponseCode() = 200
                 return true
             else
@@ -105,6 +139,86 @@
             end if
         end function
 
+        function do_refresh(sess_key) as string
+            exp = createObject("roDateTime")
+            exp.mark()
+            exp.fromseconds(exp.asseconds() + 365*24*60*60)
+  
+            sess_cook = {
+                "version": 1,
+                "domain": m.global.COOKIE_DOMAIN,
+                "path": "/",
+                "name": "session",
+                "value": sess_key,
+                "expires": exp
+                }
+            cookies = createObject("roArray", 1, false)
+            cookies.setentry(0, sess_cook)
+
+            readInternet = createObject("roUrlTransfer")
+            readInternet.SetCertificatesFile("common:/certs/ca-bundle.crt")
+            readInternet.AddHeader("X-Roku-Reserved-Dev-Id", "")
+    
+            readInternet.EnableCookies()
+            retval = readInternet.AddCookies(cookies)
+            if retval <> true
+                print "ERROR: Refresh cookie add failed!"
+            end if
+
+            readInternet.InitClientCertificates()
+            readInternet.setUrl(m.global.URI_REFRESH_SESS)
+
+            msg_port = createObject("roMessagePort")
+            readInternet.setMessagePort(msg_port)
+
+            retval = readInternet.AsyncGetToString()
+            if retval = false
+                print "ERROR: Refresh async get returned false!"
+            end if
+
+            msg = wait(5000, msg_port)
+
+            if msg = invalid
+                print "ERROR: Refesh msg add failure"
+                return "INVALID"
+            end if
+
+            if msg.GetResponseCode() = 200 then
+                headers = msg.GetResponseHeaders()
+                set_cookie = headers["set-cookie"]
+
+                after_sess = set_cookie.right(set_cookie.len() - 8)
+                sess_end = after_sess.instr(";")
+                new_sess_key = after_sess.left(sess_end)
+                
+                return new_sess_key
+            else
+                print "ERROR: Refresh was not 200"
+                return "INVALID"
+            end if
+        end function
+
+        sub end_func_store_key(sess_key)
+            reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
+            store = CreateObject("roChannelStore")
+
+            write_result = reg_sec.write(m.global.REG_SEC_TOKEN_NAME, sess_key)
+            if write_result <> true
+                print "ERROR: Local reg write fail"
+            end if
+            flush_result = reg_sec.flush()
+            if flush_result <> true
+                print "ERROR: Local reg flush fail"
+            end if
+
+            store_result = store.StoreChannelCredData(sess_key)
+            if store_result.status <> 0
+                print "ERROR: Store write cred fail"
+            end if
+
+            ' Do this last so it acts as a signal to return to parent
+            m.top.sess_key = sess_key
+        end sub
         ]]>
     </script>
 

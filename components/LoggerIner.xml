@@ -49,10 +49,6 @@
                 sess_end = after_sess.instr(";")
                 access_token = after_sess.left(sess_end)
 
-                reg_sec = CreateObject("roRegistrySection", m.global.REG_SEC)
-                reg_sec.write(m.global.REG_SEC_TOKEN_NAME, access_token)
-                reg_sec.flush()
-
                 m.top.sess_key = access_token
             else
                 print "LoggerIner INVALID"

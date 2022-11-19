@@ -15,7 +15,8 @@
     <![CDATA[
 
     sub init()
-      DEBUGGING = true
+      'DEBUGGING = true
+      DEBUGGING = false
       if DEBUGGING
           URI_API_BASE = "http://192.168.86.11:3031/api/v1/"
           COOKIE_DOMAIN = "192.168.86.11"
@@ -58,6 +59,7 @@
     ' Login step 1: Validate the session key
     sub validate_sess_key()
         m.authTask = createObject("RoSGNode", "Authenticator")
+        m.authTask.input_sess_key = m.top.sess_key
         m.authTask.observeField("sess_key", "authenticator_returned")
         m.authTask.control = "RUN" 
     end sub
@@ -69,25 +71,6 @@
             ' Session key failed to validate
             ' Continue login...
             show_app_info()
-        else
-            ' Session key validated - let's refresh it
-            m.refresher = createObject("RoSGNode", "SessionRefresher")
-            m.refresher.setField("sess_key", m.top.sess_key)
-            m.refresher.observeField("sess_key", "key_refreshed")
-            m.refresher.control = "RUN"
-        end if
-    end sub
-
-    ' Login step 2.5: Session key just got refreshed
-    sub key_refreshed()
-        m.top.sess_key = m.refresher.sess_key
-        if m.top.sess_key = "INVALID"
-            ' The refresh failed...  strange
-            print "Session refresh INVALID!"
-
-            m.invalid_login = createObject("roSGNode", "InvalidLoginDialog")
-            m.invalid_login.observeField("selected", "invalid_login_complete")
-            m.top.dialog = m.invalid_login
         else
             ' Login complete!
             readvideolist()
@@ -335,6 +318,8 @@
 
     sub options_dialog_done()
         if m.options_dlg.selected = "Logout"
+            m.top.sess_key = "INVALID"
+
             m.authTask = createObject("RoSGNode", "Authenticator")
             m.authTask.invalidate_request = true
             m.authTask.observeField("sess_key", "close_program")
