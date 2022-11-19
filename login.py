@@ -19,7 +19,7 @@ if __name__ == "__main__":
     ip = "192.168.86.31"
     port = 8080
     username = "runningstreamllc+test10@gmail.com"
-    password = "12345"
+    password = "123456"
 
     logout = False
 
