@@ -26,6 +26,7 @@
       end if
       m.global.addFields( {
         COOKIE_DOMAIN: COOKIE_DOMAIN,
+        SESSION_COOKIE: "session_ro",
         URI_API_BASE: URI_API_BASE,
         URI_AUTHENTICATE: URI_API_BASE + "authenticate_ro",
         URI_VALIDATE_SESS: URI_API_BASE + "validate_session_ro",

@@ -99,7 +99,7 @@
                 "version": 1,
                 "domain": m.global.COOKIE_DOMAIN,
                 "path": "/",
-                "name": "session",
+                "name": m.global.SESSION_COOKIE,
                 "value": sess_key,
                 "expires": exp
                 }
@@ -148,7 +148,7 @@
                 "version": 1,
                 "domain": m.global.COOKIE_DOMAIN,
                 "path": "/",
-                "name": "session",
+                "name": m.global.SESSION_COOKIE,
                 "value": sess_key,
                 "expires": exp
                 }
@@ -187,7 +187,7 @@
                 headers = msg.GetResponseHeaders()
                 set_cookie = headers["set-cookie"]
 
-                after_sess = set_cookie.right(set_cookie.len() - 8)
+                after_sess = set_cookie.right(set_cookie.len() - (m.global.SESSION_COOKIE.len() + 1))
                 sess_end = after_sess.instr(";")
                 new_sess_key = after_sess.left(sess_end)
                 

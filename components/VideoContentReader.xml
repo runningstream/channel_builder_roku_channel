@@ -31,7 +31,7 @@
           "version": 1,
           "domain": m.global.COOKIE_DOMAIN,
           "path": "/",
-          "name": "session",
+          "name": m.global.SESSION_COOKIE,
           "value": m.top.sess_key,
           "expires": exp
           }

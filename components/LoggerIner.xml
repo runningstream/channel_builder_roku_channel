@@ -39,13 +39,10 @@
             end if
 
             if msg.GetResponseCode() = 200 then
-                'TODO: remove - old method
-                'access_token = msg.GetString()
-
                 headers = msg.GetResponseHeaders()
                 set_cookie = headers["set-cookie"]
 
-                after_sess = set_cookie.right(set_cookie.len() - 8)
+                after_sess = set_cookie.right(set_cookie.len() - (m.global.SESSION_COOKIE.len() + 1))
                 sess_end = after_sess.instr(";")
                 access_token = after_sess.left(sess_end)
 
