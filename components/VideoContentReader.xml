@@ -6,6 +6,7 @@
  
   <interface>
     <field id = "sess_key" type = "string" value = "" />
+    <field id = "return_error" type = "string" value = "" />
     <field id = "videocontent" type = "node" />
   </interface> 
 
@@ -50,10 +51,16 @@
 
       readInternet.InitClientCertificates()
       readInternet.setUrl(m.global.URI_GET_VID_CONT_JSON)
-      videocontentjson = ParseJson(readInternet.GetToString())
 
+      returned_data = readInternet.GetToString()
+      if returned_data = ""
+          print "ERROR: No data returned"
+          m.top.return_error = "No data returned"
+          return
+      end if
+
+      videocontentjson = ParseJson(returned_data)
       build_vid_list(videocontent, videocontentjson.entries)
-
       m.top.videocontent = videocontent
     end sub
 

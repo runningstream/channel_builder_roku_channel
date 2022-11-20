@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component name="VideoContentError" extends="StandardMessageDialog" >
+
+<interface>
+  <field id = "selected" type = "string" value = "unset" />
+</interface>
+
+<script type="text/brightscript" >
+<![CDATA[
+function init()
+    m.top.title   = "Error Retrieving Video Content"
+    m.top.message = ["An error occurred while retrieving video content.  This often results from having no active channel - you can set one via the website."]
+    m.top.buttons = ["Quit"]
+
+    m.top.observeFieldScoped("buttonSelected", "dismissDialog")
+    m.top.observeFieldScoped("wasClosed", "wasClosedChanged")
+end function
+
+sub wasClosedChanged()
+    if m.top.selected = "unset"
+        m.top.selected = "Quit"
+        m.top.close = true
+    end if
+end sub
+
+sub dismissDialog()
+    m.top.selected = m.top.buttons[m.top.buttonSelected]
+    m.top.close = true
+end sub
+
+]]>
+</script>
+
+<children>
+</children>
+
+</component>

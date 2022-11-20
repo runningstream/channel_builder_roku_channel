@@ -163,9 +163,22 @@
     ' After Login: Start reading the video list
     sub readvideolist()
       m.readVideoContentTask = createObject("RoSGNode","VideoContentReader")
+      m.readVideoContentTask.observeField("return_error","show_video_content_error")
       m.readVideoContentTask.observeField("videocontent","showvideolist")
       m.readVideoContentTask.setField("sess_key", m.top.sess_key)
       m.readVideoContentTask.control = "RUN" 
+    end sub
+
+    ' There was an error retrieving the video content
+    sub show_video_content_error()
+        ' The login failed, display that fact
+        m.video_content_err = createObject("roSGNode", "VideoContentError")
+        m.video_content_err .observeField("selected", "video_content_err_complete")
+        m.top.dialog = m.video_content_err 
+    end sub
+
+    sub video_content_err_complete()
+        close_program()
     end sub
 
     ' Video list ready for display!
