@@ -25,6 +25,7 @@
           COOKIE_DOMAIN = "api.runningstream.cc"
       end if
       m.global.addFields( {
+        NOTIFY_SERVER: false,
         COOKIE_DOMAIN: COOKIE_DOMAIN,
         SESSION_COOKIE: "session_ro",
         URI_API_BASE: URI_API_BASE,
@@ -54,15 +55,19 @@
       m.videolist.observeField("itemSelected","playvideo")
       m.audioControls.observeField("buttonSelected", "audioControlButton")
 
-      validate_sess_key()
+      notify_server("validate_sess_key")
     end sub
 
     ' Login step 1: Validate the session key
     sub validate_sess_key()
         m.authTask = createObject("RoSGNode", "Authenticator")
         m.authTask.input_sess_key = m.top.sess_key
-        m.authTask.observeField("sess_key", "authenticator_returned")
+        m.authTask.observeField("sess_key", "authenticator_returned_pre")
         m.authTask.control = "RUN" 
+    end sub
+
+    sub authenticator_returned_pre()
+      notify_server("authenticator_returned")
     end sub
 
     ' Login step 2: See if the session key validated
@@ -71,10 +76,10 @@
         if m.top.sess_key = "INVALID"
             ' Session key failed to validate
             ' Continue login...
-            show_app_info()
+            notify_server("show_app_info")
         else
             ' Login complete!
-            readvideolist()
+            notify_server("readvideolist")
         end if
     end sub
 
@@ -82,48 +87,60 @@
     sub show_app_info()
         m.top.signalBeacon("AppDialogInitiate")
         m.app_info = createObject("roSGNode", "AppInfoDialog")
-        m.app_info.observeField("selected", "app_info_complete")
+        m.app_info.observeField("selected", "app_info_complete_pre")
         m.top.dialog = m.app_info
+    end sub
+
+    sub app_info_complete_pre()
+        notify_server("app_info_complete")
     end sub
 
     ' Login step 4: If the user wants to continue, start to request username
     sub app_info_complete()
         if m.app_info.selected = "Login"
-            request_username()
+            notify_server("request_username")
         else
-            close_program()
+            notify_server("close_program")
         end if
     end sub
 
     ' Login step 5: Display the username entry
     sub request_username()
         m.username_entry = createObject("roSGNode", "UsernameEntry")
-        m.username_entry.observeField("selected", "username_returned")
+        m.username_entry.observeField("selected", "username_returned_pre")
         m.top.dialog = m.username_entry
+    end sub
+
+    sub username_returned_pre()
+        notify_server("username_returned")
     end sub
 
     ' Login step 6: If the user didn't cancel, start to request password
     sub username_returned()
         if m.username_entry.selected = "OK"
-            request_password()
+            notify_server("request_password")
         else
-            close_program()
+            notify_server("close_program")
         end if
     end sub
 
     ' Login step 7: Display password request
     sub request_password()
         m.password_entry = createObject("roSGNode", "PasswordEntry")
-        m.password_entry.observeField("selected", "password_returned")
+        m.password_entry.observeField("selected", "password_returned_pre")
         m.top.dialog = m.password_entry
+    end sub
+
+    sub password_returned_pre()
+        notify_server("password_returned")
     end sub
 
     ' Login step 8: If the user didn't cancel, start to try to login the user/pass
     sub password_returned()
         if m.password_entry.selected = "OK"
-            attempt_userpass_auth()
+            notify_server("attempt_userpass_auth")
         else
-            close_program()
+            notify_server("close_program")
         end if
     end sub
 
@@ -132,8 +149,12 @@
         m.logger_iner = createObject("RoSGNode", "LoggerIner")
         m.logger_iner.setField("username", m.username_entry.text)
         m.logger_iner.setField("password", m.password_entry.text)
-        m.logger_iner.observeField("sess_key", "loger_iner_complete")
+        m.logger_iner.observeField("sess_key", "loger_iner_complete_pre")
         m.logger_iner.control = "RUN"
+    end sub
+
+    sub loger_iner_complete_pre()
+        notify_server("loger_iner_complete")
     end sub
 
     ' Login step 10: See if the login worked
@@ -142,21 +163,25 @@
         if m.top.sess_key = "INVALID"
             ' The login failed, display that fact
             m.invalid_login = createObject("roSGNode", "InvalidLoginDialog")
-            m.invalid_login.observeField("selected", "invalid_login_complete")
+            m.invalid_login.observeField("selected", "invalid_login_complete_pre")
             m.top.dialog = m.invalid_login
         else
             ' Login succeeded - try the session key once more
             m.top.signalBeacon("AppDialogComplete")
-            validate_sess_key()
+            notify_server("validate_sess_key")
         end if
+    end sub
+
+    sub invalid_login_complete_pre()
+        notify_server("invalid_login_complete")
     end sub
 
     ' Login step 11: User knows their login failed, either quit or retry
     sub invalid_login_complete()
         if m.invalid_login.selected = "Login"
-            request_username()
+            notify_server("request_username")
         else
-            close_program()
+            notify_server("close_program")
         end if
     end sub
 
@@ -173,7 +198,7 @@
     sub show_video_content_error()
         ' The login failed, display that fact
         m.video_content_err = createObject("roSGNode", "VideoContentError")
-        m.video_content_err .observeField("selected", "video_content_err_complete")
+        m.video_content_err.observeField("selected", "video_content_err_complete")
         m.top.dialog = m.video_content_err 
     end sub
 
@@ -344,6 +369,18 @@
     sub close_program()
         ' Quit
         m.top.closescreen = true
+    end sub
+
+    sub notify_server(next_func)
+        notify = createObject("RoSGNode", "ServerNotifier")
+        notify.setField("status", next_func)
+        notify.observeField("returned_data", next_func)
+
+        if m.global.NOTIFY_SERVER
+            notify.control = "RUN"
+        else
+            notify.setField("returned_data", "trigger")
+        end if
     end sub
 
     ]]>

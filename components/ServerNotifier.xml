@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?> 
+
+<!--********** Copyright 2016 Roku Corp.  All Rights Reserved. **********-->
+
+<component name = "ServerNotifier" extends = "Task" >
+ 
+  <interface>
+    <field id = "status" type = "string" value = "" />
+    <field id = "returned_data" type = "string" value = "" />
+  </interface> 
+
+  <script type = "text/brightscript" >
+    <![CDATA[
+
+    sub init()
+      m.top.functionName = "donotify"
+    end sub
+
+    sub donotify()
+      readInternet = createObject("roUrlTransfer")
+      readInternet.SetCertificatesFile("common:/certs/ca-bundle.crt")
+      readInternet.AddHeader("X-Roku-Reserved-Dev-Id", "")
+      readInternet.InitClientCertificates()
+      readInternet.setUrl(m.global.URI_API_BASE + "status/" + m.top.status)
+      m.top.returned_data = readInternet.GetToString()
+      m.top.returned_data = m.top.returned_data + " finished"
+    end sub
+
+    ]]>
+  </script>
+
+</component>

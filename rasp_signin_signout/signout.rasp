@@ -1,0 +1,10 @@
+params:   
+    rasp_version: 1
+    default_keypress_wait: 2
+    channels:
+      Running Stream: dev
+steps:
+    - launch: Running Stream
+    - pause: 4
+    - press: info
+    - press: ok
