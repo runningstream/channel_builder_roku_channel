@@ -9,7 +9,9 @@
 <script type="text/brightscript" >
 <![CDATA[
 function init()
-    m.top.title   = "Running Stream"
+    appinfo = createObject("roAppInfo")
+
+    m.top.title   = "Running Stream - ver " + appinfo.GetVersion()
     m.top.message = []
     m.top.buttons = ["Logout", "Cancel"]
 
